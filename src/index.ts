@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import invariant from "tiny-invariant";
 import { asc, eq, max } from "drizzle-orm";
+import morgan from "morgan";
 
 import { db } from "./db";
 import { cards, columns } from "./schema";
@@ -10,7 +11,16 @@ import { cards, columns } from "./schema";
 const app = express();
 const port = process.env.PORT || "8000";
 
+async function artificialDelay(req, res, next) {
+  console.log(req.originalUrl);
+  const ms = 1000;
+  await new Promise((resolve) => setTimeout(resolve, ms));
+  next();
+}
+
 app.use(cors());
+app.use(morgan("dev"));
+// app.use(artificialDelay);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -72,7 +82,7 @@ app.get("/columnMap", async (req, res) => {
     return prev;
   }, {});
 
-  res.json(columnMap);
+  res.json(Object.values(columnMap).sort((a, b) => a.order - b.order));
 });
 
 app.get("/columns", async (req, res) => {
@@ -92,7 +102,6 @@ app.post("/columns", async (req, res) => {
       req.body;
 
     const maxOrder = await db.select({ max: max(columns.order) }).from(columns);
-    console.log(maxOrder);
 
     invariant(maxOrder[0].max, "max order not found");
 
@@ -132,14 +141,10 @@ app.patch("/columns/:id", async (req, res) => {
 app.delete("/columns/:id", async (req, res) => {
   const id = req.params.id;
 
-  console.log("🚀🚀🚀 ~ file: index.ts:132 ~ app.delete ~ id:", id);
-
   const data = await db
     .delete(columns)
     .where(eq(columns.id, Number(id)))
     .returning();
-
-  console.log("🚀🚀🚀 ~ file: index.ts:140 ~ app.delete ~ data:", data);
 
   res.json(data);
 });
@@ -172,8 +177,6 @@ app.get("/cards/:id", async (req, res) => {
     .innerJoin(columns, eq(cards.columnId, columns.id))
     .where(eq(cards.id, Number(id)));
 
-  console.log("🚀🚀🚀 ~ file: index.ts:177 ~ app.get ~ card:", card);
-
   // await new Promise((resolve) => setTimeout(resolve, 3000));
 
   res.json(card[0]);
@@ -182,14 +185,12 @@ app.get("/cards/:id", async (req, res) => {
 // TOOD: Ensure integrity for columnID and order.
 // There should be no duplicates in order column for a particular column.
 app.post("/cards", async (req, res) => {
-  const { title, column: columnName, description = "desc" } = req.body;
-  console.log("🚀 ~ app.post ~ columnName:", columnName);
+  const { title, column: columnName, description = "" } = req.body;
 
   const [{ id }] = await db
     .select({ id: columns.id })
     .from(columns)
     .where(eq(columns.title, columnName));
-  console.log("🚀 ~ app.post ~ C_ID:", id);
 
   const [{ val }] = await db
     .select({ val: max(cards.order) })
@@ -243,9 +244,6 @@ app.patch("/cards/:id", async (req, res) => {
   if (order !== undefined) {
     updates.order = order;
   }
-
-  console.log("🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 ");
-  console.log(id, updates);
 
   // Update the card with the provided fields
   const card = await db

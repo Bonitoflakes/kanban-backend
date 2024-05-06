@@ -8,7 +8,7 @@ import { db } from "./db";
 import { cards, columns } from "./schema";
 
 const app = express();
-const port = process.env.PORT || "8000";
+const port = process.env.PORT || "9000";
 
 async function artificialDelay(req: Request, res: Response, next: () => void) {
   const ms = 1000;

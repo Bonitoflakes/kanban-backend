@@ -1,2 +1,0 @@
-$ tsx watch -r dotenv/config src/index.ts
-c

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import express from "express";
+import express, { Response, Request } from "express";
 import cors from "cors";
 import invariant from "tiny-invariant";
 import { asc, eq, max } from "drizzle-orm";
@@ -11,8 +10,7 @@ import { cards, columns } from "./schema";
 const app = express();
 const port = process.env.PORT || "8000";
 
-async function artificialDelay(req, res, next) {
-  console.log(req.originalUrl);
+async function artificialDelay(req: Request, res: Response, next: () => void) {
   const ms = 1000;
   await new Promise((resolve) => setTimeout(resolve, ms));
   next();
@@ -265,7 +263,7 @@ app.delete("/cards/:id", async (req, res) => {
   res.json(card);
 });
 
-app.listen(port, (err) => {
+app.listen(port, (err: any) => {
   if (err) return console.error(err);
   return console.log(`Server is listening on ${port}`);
 });

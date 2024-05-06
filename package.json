@@ -2,7 +2,7 @@
   "name": "supabase-drizzle-express-starter",
   "version": "1.0.0",
   "license": "MIT",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "start": "node dist/src/index.js",
     "build": "npx tsc",

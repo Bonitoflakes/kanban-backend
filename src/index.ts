@@ -101,14 +101,12 @@ app.post("/columns", async (req, res) => {
 
     const maxOrder = await db.select({ max: max(columns.order) }).from(columns);
 
-    invariant(maxOrder[0].max, "max order not found");
-
     const data = await db
       .insert(columns)
       .values({
         title,
         colorSpace,
-        order: maxOrder[0].max + 1,
+        order: maxOrder[0].max ? maxOrder[0].max + 1 : 1,
       })
       .returning();
 

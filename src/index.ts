@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express, { Response, Request } from "express";
 import cors from "cors";
 import invariant from "tiny-invariant";

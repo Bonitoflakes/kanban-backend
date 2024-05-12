@@ -111,7 +111,7 @@ app.post("/columns", async (req, res) => {
       })
       .returning();
 
-    res.json(data);
+    res.json(data[0]);
   } catch (error) {
     console.error(error);
     res.json(error);
@@ -174,8 +174,6 @@ app.get("/cards/:id", async (req, res) => {
     .innerJoin(columns, eq(cards.columnId, columns.id))
     .where(eq(cards.id, Number(id)));
 
-  // await new Promise((resolve) => setTimeout(resolve, 3000));
-
   res.json(card[0]);
 });
 
@@ -194,7 +192,7 @@ app.post("/cards", async (req, res) => {
     .from(cards)
     .where(eq(cards.columnId, id));
 
-  const card = await db
+  const cardData = await db
     .insert(cards)
     .values({
       title,
@@ -204,7 +202,19 @@ app.post("/cards", async (req, res) => {
     })
     .returning();
 
-  res.json(card);
+  const data = await db
+    .select({
+      id: cards.id,
+      title: cards.title,
+      column: columns.title,
+      order: cards.order,
+      desc: cards.description,
+    })
+    .from(cards)
+    .innerJoin(columns, eq(cards.columnId, columns.id))
+    .where(eq(cards.id, Number(cardData[0].id)));
+
+  res.json(data[0]);
 });
 
 // TOOD: Ensure integrity for columnID and order.

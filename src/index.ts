@@ -1,15 +1,14 @@
 // @ts-nocheck
 import express, { Response, Request } from "express";
 import cors from "cors";
-import invariant from "tiny-invariant";
-import { asc, eq, max } from "drizzle-orm";
+import { asc, eq, max, sql } from "drizzle-orm";
 import morgan from "morgan";
 
 import { db } from "./db";
 import { cards, columns } from "./schema";
 
 const app = express();
-const port = process.env.PORT || "9000";
+const port = process.env.PORT ?? "9000";
 
 async function artificialDelay(req: Request, res: Response, next: () => void) {
   const ms = 1000;
@@ -123,9 +122,17 @@ app.patch("/columns/:id", async (req, res) => {
     const { title, colorSpace, order } = req.body;
     const { id } = req.params;
 
+    if (order !== undefined) {
+      console.log("Updating order of the column");
+
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT update_column_order(${id}, ${order})`);
+      });
+    }
+
     const data = await db
       .update(columns)
-      .set({ title, colorSpace, order })
+      .set({ title, colorSpace })
       .where(eq(columns.id, Number(id)))
       .returning();
 
@@ -138,12 +145,15 @@ app.patch("/columns/:id", async (req, res) => {
 app.delete("/columns/:id", async (req, res) => {
   const id = req.params.id;
 
-  const data = await db
-    .delete(columns)
-    .where(eq(columns.id, Number(id)))
-    .returning();
+  const result = await db.execute(sql`SELECT delete_column(${id})`);
+  console.log("🚀🚀🚀  ~ result:", result);
 
-  res.json(data);
+  // const data = await db
+  //   .delete(columns)
+  //   .where(eq(columns.id, Number(id)))
+  //   .returning();
+
+  res.json(result);
 });
 
 app.get("/cards", async (req, res) => {
@@ -223,53 +233,52 @@ app.patch("/cards/:id", async (req, res) => {
   const { id } = req.params;
   const { title, column: columnName, description, order } = req.body;
 
-  // Initialize an empty object to store the fields to be updated
-  const updates = {};
+  console.log(
+    `Updating card ${id} with title ${title} and column ${columnName} and description ${description} and order ${order}`,
+  );
 
-  // Check if title is provided
-  if (title !== undefined) {
-    updates.title = title;
-  }
+  // Check if order is provided
+  if (order !== undefined && columnName !== undefined) {
+    const old_column_id = await db
+      .select({ id: cards.columnId })
+      .from(cards)
+      .where(eq(cards.id, id));
 
-  // Check if column is provided
-  if (columnName !== undefined) {
-    // Fetch the column id based on the column name
-    const [{ c_id }] = await db
-      .select({ c_id: columns.id })
+    const new_column_id = await db
+      .select({ id: columns.id })
       .from(columns)
       .where(eq(columns.title, columnName));
 
-    updates.columnId = c_id;
+    console.log("---------------------------------------------------------");
+    console.log(old_column_id[0].id, new_column_id[0].id);
+    console.log("---------------------------------------------------------");
+
+    // card_id, card_order, old_column_id, new_column_id
+    const result = await db.execute(
+      sql`SELECT update_card_order(${id},${order},${old_column_id[0].id},${new_column_id[0].id})`,
+    );
+    res.json(result);
+  } else {
+    const result = await db
+      .update(cards)
+      .set({ title, description })
+      .where(eq(cards.id, id))
+      .returning();
+
+    res.json(result);
   }
-
-  // Check if description is provided
-  if (description !== undefined) {
-    updates.description = description;
-  }
-
-  // Check if order is provided
-  if (order !== undefined) {
-    updates.order = order;
-  }
-
-  // Update the card with the provided fields
-  const card = await db
-    .update(cards)
-    .set(updates)
-    .where(eq(cards.id, Number(id)))
-    .returning();
-
-  res.json(card);
 });
 
 app.delete("/cards/:id", async (req, res) => {
   const { id } = req.params;
+
+  const result = await db.execute(sql`SELECT delete_card(${id})`);
   const card = await db
     .delete(cards)
     .where(eq(cards.id, Number(id)))
     .returning();
 
-  res.json(card);
+  res.json(result);
 });
 
 app.listen(port, (err: any) => {

@@ -19,7 +19,7 @@ BEGIN
     -- Move down
             UPDATE columns
             SET "order" = "order" - 1
-            WHERE "order" between new_order AND (old_order + 1);
+            WHERE "order" between  (old_order + 1) and new_order;
         END IF;
 
         UPDATE columns
